@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "GigsPicks",
+    "slug": "GigsPicks",
+    "scheme": "GigsPicks",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.jpg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#288eee"
+    },
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.GigsPicks.GigsPicks",
+      "infoPlist": {
+        "NSPhotoLibraryUs,ageDescription": "This app needs access to your photo library to show your photos.",
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show your position on the map."
+      },
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_API_KEY_HERE"
+        }
+      },
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.GigsPicks.GigsPicks"
+    },
+    "web": {
+      "favicon": "./assets/favicon.jpg"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a2ac01f0-2061-4190-aea8-0feca93a9378"
+      }
+    }
+  }
+}
