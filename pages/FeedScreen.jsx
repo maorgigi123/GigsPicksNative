@@ -7,64 +7,74 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Color from './Colors/Color';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {selectCurrentMessages, selectCurrentUser, selectLoadPost } from '../store/user/user.selector';
 import PostComponents from './components/PostComponents';
 import LoadNewPost from './components/LoadNewPost';
+import { SET_ROUTE } from '../store/user/user.action';
 
 
 const FeedHeaderRight = ({route,navigation}) => {
     const user = useSelector(selectCurrentUser)
     const [posts, setPosts] = useState([]);
-    const [viewedPosts, setViewedPosts] = useState([]);
+    const [viewedPosts, setViewedPosts] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [openSeeAllPosts , setOpenSeeAllPosts] = useState(false)
     const [viewableItems, setViewableItems] = useState([]);
     const LoadForPostSelector = useSelector(selectLoadPost)
     const [LoadForPost , setLoadForPost] = useState(LoadForPostSelector)
-
-
+    const dispatch = useDispatch()
+    useEffect(() => {
+      dispatch(SET_ROUTE('feed'))
+    },[])
     useEffect(() => {
         setLoadForPost(LoadForPostSelector)
     },[LoadForPostSelector])
 
-      const fetchPosts = async () => {
-        try {
-          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/findPosts`, {
-            method: "post",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user._id,
-              seenPosts: viewedPosts
-            })
-          });
-          
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-    
-          const data = await response.json();
-          // Filter out duplicate posts
-          const uniquePosts = data.filter(post => !viewedPosts.includes(post._id));
-          setPosts(prevPosts => [...prevPosts, ...uniquePosts]);
-          if (viewedPosts.length > 0 && data.length <= 0) setOpenSeeAllPosts(true);
-        } catch (error) {
-          console.error('Error fetching posts:', error);
-        } finally {
-          setIsLoading(false);
-        }
+   // Fetch posts from the server
+   const fetchPosts = async () => {
+    console.log('load more');
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/findPosts`, {
+        method: "post",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          seenPosts: Object.entries(viewedPosts).map(([id, viewLong]) => ({ id, viewLong }))
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
 
-  useEffect(() => {
-    if (!posts) return;
-  
-    // Extract new post IDs from the fetched data
-    const newPostsIDs = posts.map(post => post._id);
-    // Filter out duplicates from new post IDs
-    const uniqueNewPostsIDs = newPostsIDs.filter(id => !viewedPosts.includes(id));
-    if (uniqueNewPostsIDs.length === 0) return;
-    setViewedPosts(prevIDs => [...prevIDs, ...uniqueNewPostsIDs]);
-  }, [posts]);
+      const data = await response.json();
+      // Filter out posts that are not in the viewedPosts
+      const uniquePosts = data.filter(post => !viewedPosts[post._id]);
+      setPosts(prevPosts => [...prevPosts, ...uniquePosts]);
+      if (Object.keys(viewedPosts).length > 0 && data.length <= 0) setOpenSeeAllPosts(true);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+ // Update viewedPosts with new posts and default viewLong to false
+ useEffect(() => {
+  if (!posts) return;
+  const newViewedPosts = posts.reduce((acc, post) => {
+    if (!viewedPosts[post._id]) {
+      acc[post._id] = false; // Default viewLong to false
+    }
+    return acc;
+  }, {});
+
+  setViewedPosts(prev => ({
+    ...prev,
+    ...newViewedPosts
+  }));
+}, [posts]);
 
   useEffect(() => {
     if (posts.length === 0 && !isLoading) {
@@ -77,6 +87,7 @@ const FeedHeaderRight = ({route,navigation}) => {
   const renderItem = ({ item }) => (
     <>
      <PostComponents
+      setViewedPosts = {setViewedPosts}
         setPosts={setPosts} 
         post={item} 
         posts={posts}

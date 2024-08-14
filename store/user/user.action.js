@@ -28,3 +28,12 @@ export const setUpdateMessage = (message) =>
 
 export const setLoadPost = (load) => 
     createAction(USER_ACTION_TYPES.SET_LOAD_POST,load);
+
+export const addFollow = () => 
+    createAction(USER_ACTION_TYPES.ADD_FOLLOW);
+
+export const removeFollow = () => 
+    createAction(USER_ACTION_TYPES.REMOVE_FOLLOW);
+
+export const SET_ROUTE = (route) => 
+    createAction(USER_ACTION_TYPES.SET_ROUTE,route);

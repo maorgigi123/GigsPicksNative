@@ -14,15 +14,16 @@ export default function FeedProfilePreview() {
   const firstRouteName = useNavigationState(state => state.routes[0]?.name);
 
 
-  const renderItem = ({ item }) => (
-    <PostComponents
+  const renderItem = ({ item }) => {
+    console.log(firstRouteName , ' first route')
+    return <PostComponents
       post={item}
       like={item.likes.some(like => like._id === user._id)}
       setPosts={setPosts}
       CommentNavigate={(firstRouteName === 'FeedMain' ? 'Profile' :'ProfileMain')}
       ChatNavigate={(firstRouteName === 'FeedMain' ? 'ChatScreen' :'ChatScreenProfile')}
     />
-  );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: Color.BLACK }}>

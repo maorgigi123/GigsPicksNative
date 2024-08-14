@@ -255,12 +255,11 @@ const getMimeType = (extension) => {
               </View>
                 <View style={styles.selectedImageContainer}>
               {selectedPhoto && selectedPhoto.mediaType === 'photo' ? (
-                <ExpoImage
-                  source={{ uri: selectedPhoto.uri,
- }}
-                  style={[styles.selectedPhoto, { resizeMode }]}
-
-                />
+               <ExpoImage
+               source={{ uri: selectedPhoto.uri }}
+               style={styles.selectedPhoto}
+               contentFit={resizeMode} // Move this prop outside of the style array
+             />
               ) : selectedPhoto && selectedPhoto.mediaType === 'video' ? (
                 <Video
                   ref={videoRefs}
@@ -313,7 +312,7 @@ const getMimeType = (extension) => {
                     <TouchableOpacity onPress={handleMultiClick}>
                       <Icon name={'layers-outline'} size={28} color={selectedMultiMode ? Color.PRIMARY_BUTTON : Color.WHITE} />
                     </TouchableOpacity>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => {navigation.navigate('camera')}}>
                       <Feather name={'camera'} size={28} color={Color.WHITE} />
                     </TouchableOpacity>
 
@@ -387,7 +386,6 @@ const styles = StyleSheet.create({
   selectedPhoto:{
     width:'100%',
     height:350,
-    resizeMode: 'contain',
   },
   topStyle:{
     display:'flex',

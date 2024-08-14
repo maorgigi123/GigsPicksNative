@@ -10,7 +10,7 @@ import ProfileScreen from './ProfileScreen';
 import Videos from './Videos';
 import FeedStackScreen from './FeedStackNavigator';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectCurrentMessages, selectCurrentUser } from '../store/user/user.selector';
+import { selectCurrentMessages, selectCurrentRoute, selectCurrentUser } from '../store/user/user.selector';
 import { useNavigation, useNavigationState, useRoute } from '@react-navigation/native';
 import ProfileStack from './ProfileStack';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -21,9 +21,10 @@ import Messages from './Messages/Messages';
 import MessagesStack from './MessagesStack';
 import ExplorePageStack from './ExploreStack';
 import { setCurrentWs } from '../store/webSocket/ws.action';
-import { SET_CURRENTPLAYERS, SET_PLAYERS_LOCATION, setAddMessage, setCurrentUser, setLoadPost, setUpdateMessage } from '../store/user/user.action';
+import { SET_CURRENTPLAYERS, SET_PLAYERS_LOCATION, SET_ROUTE, setAddMessage, setCurrentUser, setLoadPost, setUpdateMessage } from '../store/user/user.action';
 import { UserContext } from '../store/userContext';
 import ExpoImage from 'expo-image/build/ExpoImage';
+import { rotate } from 'react-native-redash';
 
 const Tab = createBottomTabNavigator();
 const HomeScreen = () => {
@@ -36,12 +37,19 @@ const HomeScreen = () => {
     let timeOut = useRef(null);
     const [newMessage,setNewMessage] = useState()
     const { setPathUserMessage } = useContext(UserContext);
-
+    const currentRoute = useSelector(selectCurrentRoute)
+    useEffect(() => {
+      console.log('current route: ',currentRoute)
+    },[currentRoute])
     useEffect(() => {
         if(!user) return
     
         setLoad(true)
         // Initialize WebSocket connection
+        // const encodedUsername = encodeURIComponent(user.username);
+        // const wsUrl = `ws://${process.env.EXPO_PUBLIC_API_URL_WS}?username=${encodedUsername}`;
+
+        // ws.current = new WebSocket(wsUrl);
         ws.current = new WebSocket(encodeURI(`ws://${process.env.EXPO_PUBLIC_API_URL_WS}?username=${user.username}`));
     
         // WebSocket connection opened
@@ -62,7 +70,6 @@ const HomeScreen = () => {
             dispatch(setUpdateMessage(mesage.updateRead.data))
            }
            if(mesage.newLocationUpdate){
-            // console.log('new locations ',mesage.newLocationUpdate)
             dispatch(SET_PLAYERS_LOCATION({location:mesage.newLocationUpdate,username:mesage.username}))
           }
           if(mesage.uploadPost){
@@ -78,7 +85,7 @@ const HomeScreen = () => {
             dispatch(SET_CURRENTPLAYERS([]))
             mesage.allPlayersLocation.map((message) => {
               if(message.username && message.username !== user.username){
-                console.log('add : ',message.username)
+                console.log(`add to :${user.username} mark of ${message.username}`)
                 dispatch(SET_PLAYERS_LOCATION({location:message.location,username:message.user}))
               }
             })
@@ -104,7 +111,7 @@ const HomeScreen = () => {
           ws.current.close();
         };
     
-      }, [user]);
+      }, []);
 
       useEffect(() => {
         const handleAppStateChange = (nextAppState) => {
@@ -134,7 +141,7 @@ const HomeScreen = () => {
                     dispatch(setUpdateMessage(mesage.updateRead.data))
                    }
                   if(mesage.newLocationUpdate){
-                    // console.log('new locations ',mesage.newLocationUpdate)
+                    console.log('new locations ',mesage.newLocationUpdate)
                     dispatch(SET_PLAYERS_LOCATION({location:mesage.newLocationUpdate,username:mesage.username}))
                   }
                   if(mesage.uploadPost){
@@ -229,6 +236,11 @@ const HomeScreen = () => {
                 },
                 
             })}
+            screenListeners={({ route }) => ({
+              tabPress: (e) => {
+                dispatch(SET_ROUTE(route.name));
+              },
+            })}
         >
             <Tab.Screen name="Feed" component={FeedStackScreen} options={{ headerShown: false}}/>
             <Tab.Screen name="Messages" component={MessagesStack} options={{headerShown: false }} 
@@ -239,16 +251,16 @@ const HomeScreen = () => {
         </Tab.Navigator>
         </BottomSheetModalProvider>
     } 
-    {newMessage && 
+    {newMessage && currentRoute !== 'Messages' && 
          <SafeAreaView style={styles.newMessageContainer}>
           <TouchableOpacity style={styles.newMessage} onPress={() => {
             setNewMessage();
-            setPathUserMessage({ username: newMessage.sender.username})
+            setPathUserMessage(newMessage.sender)
             navigation.navigate('Messages')}
           }>
           <ExpoImage
-              source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${newMessage.profileImg}` }} // Replace with actual image source
-              style={styles.profileImg}
+              source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${newMessage.sender.username === user.username ? newMessage.recipient.profile_img : newMessage.sender.profile_img}` }} // Replace with actual image source
+              style={styles.profileImg}s
           />
           <View style={styles.newMessageProfileInfoContainer}>
               <Text style={styles.profileName}>{newMessage.sender.username}</Text>

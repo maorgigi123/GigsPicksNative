@@ -14,6 +14,7 @@ import { setCurrentWs } from "./store/webSocket/ws.action";
 import React from 'react';
 import Icon from 'react-native-vector-icons/Ionicons'; // Import your preferred icon library
 import Color from './pages/Colors/Color';
+import CameraScreen from './pages/camera/camera';
 
 export default function AppStack({ navigation }) {
 
@@ -33,19 +34,28 @@ export default function AppStack({ navigation }) {
             }}
         />
         <Stack.Screen
+                name="camera"
+                component={CameraScreen}
+                options={({ navigation }) => ({
+                    headerShown: false,
+                })}
+            />
+            
+        <Stack.Screen
             name="Register"
             component={RegisterScreen}
             options={({ navigation }) => ({
-                title: 'Create Account',
-                headerStyle: { backgroundColor: Color.BLACK},
-                headerTintColor: Color.WHITE,
-                headerShown: true, // Show the header for this screen
-                headerLeft: () => (
-                  <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
-                        <Icon name={'chevron-back-sharp'} size={28} color={Color.WHITE} />
-                  </TouchableOpacity>
-              ),
-              headerShadowVisible: false,
+                headerShown: false, // Hide the header for this screen
+            //     title: 'Create Account',
+            //     headerStyle: { backgroundColor: Color.BLACK},
+            //     headerTintColor: Color.WHITE,
+            //     headerShown: true, // Show the header for this screen
+            //     headerLeft: () => (
+            //       <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
+            //             <Icon name={'chevron-back-sharp'} size={28} color={Color.WHITE} />
+            //       </TouchableOpacity>
+            //   ),
+            //   headerShadowVisible: false,
             })}
         />
            <Stack.Screen

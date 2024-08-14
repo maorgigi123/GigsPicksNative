@@ -13,6 +13,7 @@ import PreivewFile from './components/PreivewFile';
 import ProfileSetting from './components/ProfileSetting';
 import LoginScreen from './Login';
 import EditProfile from './components/EditProfile';
+import Friends from './Friends/Friends';
 
 const FeedStack = createStackNavigator();
 
@@ -68,6 +69,26 @@ export default function ProfileStack() {
         component={MessageUser} 
         options={{ headerShown: false }} // Customize as needed
         />
+
+  <FeedStack.Screen 
+        name="ShowFriends" 
+        component={Friends} 
+        options={({ navigation }) => ({ headerShown: true,
+          headerStyle:{backgroundColor:Color.BLACK},
+          headerTintColor:Color.WHITE,
+          headerTitle:user.username,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
+                 <Icon name={'chevron-back-sharp'} size={28} color={Color.WHITE} />
+            </TouchableOpacity>
+  
+        ),
+          
+        })
+      } // Customize as needed
+        
+        />
+
 
 <FeedStack.Screen 
       name="PreviewFile" 

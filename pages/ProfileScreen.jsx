@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentUser } from "../store/user/user.selector";
 import { useNavigation, useNavigationState, useRoute } from "@react-navigation/native";
 import { View, Text, ActivityIndicator, TouchableOpacity, FlatList, SafeAreaView, RefreshControl, StyleSheet } from "react-native";
@@ -10,7 +10,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Color from "./Colors/Color";
 import { UserContext } from "../store/userContext";
-
+import { addFollow, setCurrentUser } from "../store/user/user.action";
+import { Axios } from "axios";
 const ProfileContainer = styled.View`
   width: 100%;
   background-color: black;
@@ -99,6 +100,7 @@ const PostsContainer = styled.View`
 const ProfileLayout = () => {
   const _user = useSelector(selectCurrentUser);
   const navigation = useNavigation();
+  const dispath = useDispatch()
   const route = useRoute();
   const { username} = route.params;
   const {back} = route.params
@@ -110,6 +112,8 @@ const ProfileLayout = () => {
   const [user, setUser] = useState();
   const [isAdmin, setIsAdmin] = useState(false);
   const [seeAll,setSeeAll] = useState(false)
+  // const isFollowTest = _user && _user.following.some(follow => follow.following.username === username)
+  const [isFollow,setIsFollow] = useState(false)
   let postsID = useRef([]);
   let post = useRef(null);
 
@@ -127,7 +131,12 @@ const ProfileLayout = () => {
       const fetchUser = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/getUserByUsername`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, seen: postsID.current.length })
+        body: JSON.stringify({ 
+          username,
+           seen: postsID.current.length,
+            CurrentUsername : _user.username,
+            CurrentId : _user._id
+          })
       });
 
       const data = await fetchUser.json();
@@ -137,11 +146,16 @@ const ProfileLayout = () => {
       } else {
         const user = data[0];
         const posts = data[1];
+        const isFreind = data[2]
+        setIsFollow(isFreind)
         if(posts.length <=0) setSeeAll(true); 
         if(posts.length < 12) setSeeAll(true)
         const unseenPosts = posts.filter(post => !postsID.current.includes(post._id));
         setPosts((prev) => [...prev, ...unseenPosts]);
         postsID.current.push(...unseenPosts.map(post => post._id));
+        if(isAdmin){
+          dispath(setCurrentUser(user))
+        }
         setUser(user);
         setPosts(posts);
         setTimeout(()=>{
@@ -231,6 +245,33 @@ const chunkData = (data, size) => {
   return result;
 };
 
+const handleAddFollowFunction = async() => {
+  const FollowRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/AddFollow`,{
+    method:'post',
+    headers:{'content-Type':'application/json'},
+      body: JSON.stringify({
+        follower:_user._id,
+        following:user._id
+      })
+  })
+
+  const data = await FollowRes.json()
+  if(data.message === 'Added follow'){
+    setIsFollow(true)
+    // dispath(setCurrentUser(data.followerUser))
+    // dispath(addF ollow())
+  }
+  else if(data.message === 'Removed follow'){
+    setIsFollow(false)
+    // dispath(setCurrentUser(data.followerUser))
+    // dispath(removeFollow())
+  }
+  else{
+    setIsFollow(false)
+    console.log('was error while following')
+  }
+}
+
 
   const gridData = chunkData(SelectPosts ? allPosts : [], allPosts.length);
   return (
@@ -315,25 +356,38 @@ const chunkData = (data, size) => {
                 <TopLayoutLeft>
                   {back && 
                   <TouchableOpacity onPress={() => {navigation.goBack()}}>
-                         <Icon name={'chevron-back-sharp'} size={40} color={Color.WHITE} />
+                         <Icon name={'chevron-back-sharp'} size={30} color={Color.WHITE} />
                   </TouchableOpacity>
                   
                   }
-                  <TopLayoutProfileImg source={{ uri:user ? `${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}` : ''}} />
+                  <TouchableOpacity onPress={() => {navigation.navigate('PreviewFile',{item:{data:_user && isAdmin ? _user.profile_img : user.profile_img, typeFile: "image/png"}})}}>
+                       <TopLayoutProfileImg source={{ uri:_user && isAdmin ? `${process.env.EXPO_PUBLIC_API_URL}/uploads/${_user.profile_img}` : user ? `${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}` : ''}} />
+                  </TouchableOpacity>
                 </TopLayoutLeft>
                 <TopLayoutRight>
                   <View style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Text style={{ color: 'white' }}>{user.posts}</Text>
                     <Text style={{ color: 'white' }}>posts</Text>
                   </View>
-                  <View style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Text style={{ color: 'white' }}>{user.followers_count}</Text>
-                    <Text style={{ color: 'white' }}>followers</Text>
-                  </View>
-                  <View style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Text style={{ color: 'white' }}>{user.following_count}</Text>
-                    <Text style={{ color: 'white' }}>following</Text>
-                  </View>
+                  <TouchableOpacity activeOpacity={.8} onPress={() => {navigation.push('ShowFriends',{
+                    Type:'followers',
+                    user : isAdmin && _user ? _user : user
+                  })}}>
+                      <View style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Text style={{ color: 'white' }}>{isAdmin && _user ? _user.followers_count : user.followers_count}</Text>
+                        <Text style={{ color: 'white' }}>followers</Text>
+                      </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity activeOpacity={.8} onPress={() => {navigation.push('ShowFriends',{
+                    Type:'following',
+                    user : isAdmin && _user ? _user : user
+                  })}}>
+                    <View style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <Text style={{ color: 'white' }}>{isAdmin && _user ? _user.following_count : user.following_count}</Text>
+                      <Text style={{ color: 'white' }}>following</Text>
+                    </View>
+              </TouchableOpacity>
+                 
                 </TopLayoutRight>
               </TopLayoutContainer>
               <BioContainer>
@@ -342,11 +396,16 @@ const chunkData = (data, size) => {
               </BioContainer>
               {!isAdmin ? (
                 <View style={{ display: 'flex', flexDirection: 'row', width: '100%', gap: 15, marginLeft: 15,marginTop:15,marginBottom:15 }}>
-                  <TouchableOpacity activeOpacity={.7} style={{ backgroundColor: 'rgb(0,149,246)', padding: 12, borderRadius: 8, width: 120, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+               {isFollow ?    
+                  <TouchableOpacity onPress={() => {handleAddFollowFunction()}} activeOpacity={.7} style={{ backgroundColor: Color.GrayBackground, padding: 12, borderRadius: 8, width: 120, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: 'white' }}>Unfollow</Text>
+                  </TouchableOpacity> :    
+                  <TouchableOpacity onPress={() => {handleAddFollowFunction()}} activeOpacity={.7} style={{ backgroundColor: 'rgb(0,149,246)', padding: 12, borderRadius: 8, width: 120, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: 'white' }}>Follow</Text>
                   </TouchableOpacity>
+                  }
                   <TouchableOpacity activeOpacity={.7} style={{ backgroundColor: '#323436', padding: 12, borderRadius: 8, width: 120, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} onPress={() => {
-                       setPathUserMessage({ username: user.username,profile_img:user.profile_img,_id:user._id });
+                       setPathUserMessage({ username: user.username,profile_img:user.profile_img,_id:user._id, recipient: user });
 
                        navigation.navigate('Messages');
 

@@ -8,7 +8,7 @@ import {AntDesign,MaterialIcons} from 'react-native-vector-icons'; // Import you
 import { TouchableOpacity } from 'react-native';
 import EditImage from './components/EditImage';
 import AddPots from './AddPots';
-
+import CameraScreen from './camera/camera';
 export const AddPostStack = () => {
     const AddPostStack = createStackNavigator();
     const CustomTransition = {
@@ -71,7 +71,6 @@ export const AddPostStack = () => {
                     ...CustomTransition,
                 })}
             />
-
         <AddPostStack.Screen
                 name="Post"
                 component={AddPots}

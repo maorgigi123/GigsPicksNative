@@ -39,7 +39,8 @@
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "INTERNET"
       ],
       "package": "com.GigsPicks.GigsPicks"
     },
@@ -47,6 +48,7 @@
       "favicon": "./assets/favicon.jpg"
     },
     "plugins": [
+      "expo-camera",
       "expo-router"
     ],
     "extra": {

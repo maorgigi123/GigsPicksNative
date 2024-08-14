@@ -46,9 +46,10 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
+    if(!isFocused) return
     if (ws.currentWs && ws.currentWs.readyState === WebSocket.OPEN) 
       ws.currentWs.send(JSON.stringify({type:'getAllPlayersLocation', payload:{username:user}}));
-  }, [isFocused])
+  }, [(isFocused == true)])
   const handleShowCard = (_user) => {
     if(_user.username !== user.username){
       console.log('click on ',_user.username)
@@ -88,17 +89,35 @@ useEffect(() => {
               longitude: current_location.location.longitude,
               latitudeDelta: 0.05,
               longitudeDelta: 0.02,
-            }} image={UserImage}  onPress={() =>{handleShowCard(current_location.username)}}/>
+            }} onPress={() => {handleShowCard(user)}}>
+                <View style={styles.markerContainer}>
+                  <View style={styles.imageContainer}>
+                    <Image
+                      source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}`}}
+                      style={styles.image}
+                    />
+                  </View>
+                </View>
+            </Marker>
           
-          {players_location.length > 0 && players_location.map((location) => [
+          {players_location.length > 0 && players_location.map((location) => location.username.username && [
+            
               user && console.log('for: ',user.username  ,' marker of ' ,location.username.username , ' marker For Now : ',players_location.length),
-               <Marker key={location.username.username} coordinate={{
-                latitude: location.location.latitude,
-                longitude: location.location.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.02,
-              }} image={UserImage}  onPress={() => {handleShowCard(location.username)}}>
-                </Marker>
+                  <Marker key={location.username.username} coordinate={{
+                    latitude: location.location.latitude,
+                    longitude: location.location.longitude,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.02,
+                  }} onPress={() => {handleShowCard(location.username)}}>
+                      <View style={styles.markerContainer}>
+                        <View style={styles.imageContainer}>
+                          <Image
+                            source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${location.username.profile_img}`}}
+                            style={styles.image}
+                          />
+                        </View>
+                      </View>
+                  </Marker>
           ])}
          
 
@@ -156,5 +175,21 @@ const styles = StyleSheet.create({
     position:'absolute',
     bottom:0,
     width:'100%'
-}
+},
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageContainer: {
+    width: 70, // Adjust the size as needed
+    height: 70,
+    borderRadius: 100, // Make it circular
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff', // Optional: add a border around the image
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
 });

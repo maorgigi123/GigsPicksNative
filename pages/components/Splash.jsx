@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import LottieView from 'lottie-react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
@@ -12,7 +12,6 @@ export default function Splash({ setSplashAnimationFinish }) {
 
     return () => clearTimeout(timer); // Clear the timer if the component unmounts
   }, []);
-
   return (
     <Animated.View exiting={FadeOut} style={{ flex: 1 }}>
       <LottieView

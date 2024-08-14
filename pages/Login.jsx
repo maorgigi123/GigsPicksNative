@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     loginButton: {
         width: '100%',
         height: 50,
-        backgroundColor: '#0095f6',
+        backgroundColor:  Color.PRIMARY_BUTTON,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 5,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     },
     registerLinkText: {
         fontSize: 16,
-        color: '#0095f6',
+        color:  Color.PRIMARY_BUTTON,
     },
     ErrorContainer:{
       display:'flex',

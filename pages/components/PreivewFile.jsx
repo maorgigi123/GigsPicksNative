@@ -57,7 +57,7 @@ const data = item.uri ? item.uri : item.data
         </View>
         
         :
-        <ImageZoom style={styles.image} source={{ uri: data.startsWith('Messages')  ?`${process.env.EXPO_PUBLIC_API_URL}/uploads/${item.data ? item.data : item.uri}` : item.data ? item.data : item.uri}} />
+        <ImageZoom style={styles.image} source={{ uri: data.startsWith('Messages') || data.startsWith('Profiles')  ?`${process.env.EXPO_PUBLIC_API_URL}/uploads/${item.data ? item.data : item.uri}` : item.data ? item.data : item.uri}} />
     }
     </View>
   )

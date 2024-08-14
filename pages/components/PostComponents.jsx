@@ -1,4 +1,4 @@
-import { View, Text, Alert,StyleSheet,FlatList,Dimensions, TouchableOpacity, TextInput, ScrollView, Vibration} from 'react-native'
+import { View, Text, Alert,StyleSheet,FlatList,Dimensions, TouchableOpacity, TextInput, ScrollView, Vibration, Pressable} from 'react-native'
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 // import { Video } from 'expo-av';
 import Icon from 'react-native-vector-icons/Ionicons'; // Import your preferred icon library
@@ -24,6 +24,7 @@ import { TapGestureHandler, State } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import {Image} from 'expo-image'
 import ExpoImage from 'expo-image/build/ExpoImage';
+
 const AllCommentsContainer = styled.View`
     display: flex;
     flex-direction: column;
@@ -216,7 +217,7 @@ const ContainerPreviewAdd = ({post,like,handleAddLikeComment}) => {
 
 const AnimiatedImage = Animated.createAnimatedComponent(Image)
 
-const PostComponents = memo(({post,like,setPosts,CommentNavigate = 'Profile',ChatNavigate='ChatScreen',isViewable=true}) => {
+const PostComponents = memo(({post,like,setViewedPosts,setPosts,CommentNavigate = 'Profile',ChatNavigate='ChatScreen',isViewable=true}) => {
 
   const route = useRoute()
   const user = useSelector(selectCurrentUser);
@@ -235,14 +236,29 @@ const PostComponents = memo(({post,like,setPosts,CommentNavigate = 'Profile',Cha
   const videoRefs = useRef([]); // Array to store refs for multiple videos
   const [commentInput,setCommentInput] = useState('')
   const isFocused = useIsFocused(); // Hook to detect if screen is focused
+  const loadingCommentRef = useRef(false); // UseRef for tracking loading state
+
+  const totalVisibleTimeRef = useRef(0); // Ref to track total visible time
+  const visibilityStartTimeRef = useRef(null); // Ref to track start time when element becomes visible
+  const intervalRef = useRef(null); // Ref to hold interval ID
+  const isLongViewed = useRef(false); // Ref to indicate if visible time exceeds 3 seconds
+ 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   function handlePresentModal(){
     bottomSheetModelRef.current?.present()
+    setIsModalOpen(true);
   }
   function handleCloseModal(){
     bottomSheetModelRef.current?.close()
+    setIsModalOpen(false);
   }
-
+  const handleOverlayPress = () => {
+    if (isModalOpen) {
+      handleCloseModal();
+    }
+  };
 
     useEffect(() => {
     if (videoRefs.current[currentIndex]) {
@@ -254,26 +270,77 @@ const PostComponents = memo(({post,like,setPosts,CommentNavigate = 'Profile',Cha
     }
   }, [pause, currentIndex]);
 
-useEffect(() => {
-  // console.log(isViewable)
-  if (isViewable) {
-    setPause(false)
-  }else {
-    setPause(true)
+  useEffect(() => {
+    if(isFocused === false){
+      setPause(true)
+    }
+  },[isFocused])
+  useEffect(() => {
+    if (isViewable) {
+      setPause(false);
+
+      if (visibilityStartTimeRef.current === null) {
+        visibilityStartTimeRef.current = Date.now();
+      }
+
+      if (intervalRef.current === null) {
+        intervalRef.current = setInterval(() => {
+          totalVisibleTimeRef.current += 1; // Increment ref value
+
+          if (totalVisibleTimeRef.current > 3 && !isLongViewed.current) {
+            isLongViewed.current = true;
+            console.log('Element has been visible for more than 3 seconds');
+            setViewedPosts && setViewedPosts(prev => ({
+              ...prev,
+              [post._id]: true,
+            }));
+            clearInterval(intervalRef.current); // Clear the interval
+            intervalRef.current = null;
+          }
+        }, 1000);
+      }
+    } else {
+      setPause(true);
+
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+
+        if (visibilityStartTimeRef.current !== null) {
+          const visibilityDuration = (Date.now() - visibilityStartTimeRef.current) / 1000; // Convert ms to seconds
+          totalVisibleTimeRef.current += visibilityDuration;
+
+          if (totalVisibleTimeRef.current > 3 && !isLongViewed.current) {
+            isLongViewed.current = true;
+            setViewedPosts && setViewedPosts(prev => ({
+              ...prev,
+              [post._id]: true,
+            }));
+          }
+          visibilityStartTimeRef.current = null; // Reset the start time
+        }
+      }
     }
 
-},[isViewable])
-useEffect(() => {
-  if (!isFocused) {
-    setPause(true)
-  }
-
-},[isFocused])
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isViewable]);
 
 const addNewComment = (commentPost) => {
-  const newCommentHeader = <CommentHeaderComponent key={commentHeaders.length} post={commentPost} user={user} handleAddLike={handleAddLikeComment} />;
+  const newCommentHeader = <CommentHeaderComponent key={`commentHeaders.length${commentPost.createdAt}_${user.username}`} post={commentPost} user={user} handleAddLike={handleAddLikeComment} navigation={navigation} CommentNavigate={CommentNavigate} handleCloseModal={handleCloseModal} ChatNavigate={ChatNavigate}/>;
   setCommentHeaders(prevCommentHeaders => [newCommentHeader,...prevCommentHeaders]);
+
 };
+
+const addMoreComment = (commentPost) => {
+  const newCommentHeader = <CommentHeaderComponent key={`commentHeaders.length${commentPost.createdAt}_${user.username}`} post={commentPost} user={user} handleAddLike={handleAddLikeComment} navigation={navigation} CommentNavigate={CommentNavigate} handleCloseModal={handleCloseModal} ChatNavigate={ChatNavigate}/>;
+  setCommentHeaders(prevCommentHeaders => [...prevCommentHeaders,newCommentHeader]);
+
+};
+
   const FetchAddComment = async() => {
     if(PostCommentInput.current.value.length <= 0){
       return Alert.alert('cant post Empty comment')
@@ -382,7 +449,6 @@ const addNewComment = (commentPost) => {
   useEffect(() => {
     // Initialize with existing comments when the post or display changes
     if (post.comments.length > 0) {
-      console.log('add comment 2')
       const initialComments = post.comments.map((comment) => (
         <CommentHeaderComponent key={comment._id} post={comment} user={user} handleAddLike={handleAddLikeComment} navigation={navigation} CommentNavigate={CommentNavigate} handleCloseModal={handleCloseModal} ChatNavigate={ChatNavigate}/>
       ));
@@ -460,9 +526,10 @@ const addNewComment = (commentPost) => {
               {pause &&<DropShadow style={[{shadowColor: "#000", shadowOffset: {width: 0,height: 0,},shadowOpacity: 1,shadowRadius: 5, },styles.iconPause]}>
               <Icon name={'play-outline'} size={100} color={'#fff'}/></DropShadow>} 
               <Video
-                    shouldPlay={false} // Should play when not paused
+                    // shouldPlay={false} // Should play when not paused
                     isLooping
-                      isMuted={mute}
+                    onError={(error) => console.error('Failed to load video', error)}
+                    isMuted={mute}
                       resizeMode='cover'
                       source={{uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${item.uri}` }}
                       style={styles.image}
@@ -484,7 +551,11 @@ const addNewComment = (commentPost) => {
     }
     return( 
             <View activeOpacity={1} style={[{position:'relative'},styled.image]}>
-              <ImageZoom style={styles.image} source={{ uri:`${process.env.EXPO_PUBLIC_API_URL}/uploads/${item.uri}`}} />
+              <ImageZoom
+                style={styles.image}
+                source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${item.uri}` }}
+                onError={(error) => console.error('Failed to load image', error)}
+              />
           </View>
       
     )
@@ -517,8 +588,51 @@ const addNewComment = (commentPost) => {
     ]
   }))
 
+  const FetchMoreComments = async() => {
+    if(loadingCommentRef.current) return
+    loadingCommentRef.current = true;
+    try{
+      console.log('load more comments now ',commentHeaders.length)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/LoadMoreComments`, {
+        method: "post",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postID: post._id,
+          commentsSkip: commentHeaders.length
+        })
+      })
+      const data = await response.json()
+      data.comments.map((comment) => {
+        addMoreComment(comment);
+      })
+      setTimeout(() => {
+        if(data.comments.length < 15){
+          console.log('load all')
+          loadingCommentRef.current = true;
+        }
+        else{
+          loadingCommentRef.current = false;
+        }
+      },500)
+     
+    }
+    catch(e){
+      console.log('error while loading more comments ',e)
+      setTimeout(() => {
+        loadingCommentRef.current = false;
+      },500)
+    }
+  }
+  const handleScroll = ({ nativeEvent }) => {
+    if (isCloseToBottom(nativeEvent) && !loadingCommentRef.current) {
+      FetchMoreComments()
+    }
+  };
 
-
+  const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }) => {
+    const paddingToBottom = 200;
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+  };
 
   return (
         <View style={{marginBottom:30}}>
@@ -708,19 +822,24 @@ const addNewComment = (commentPost) => {
             
         </View>
         )}
+      {isModalOpen && (
+        <Pressable style={styles.overlay} onPress={handleOverlayPress} />
+      )}
+
          <BottomSheetModal
                   ref={bottomSheetModelRef}
                   index={0}
                   snapPoints={snapPoints}
+                  onDismiss={handleCloseModal}
                   backgroundStyle={{borderRadius:24,backgroundColor:Color.GrayBackground}}
                   handleIndicatorStyle={{color:Color.LINE_BREAK}}
-                  footerComponent={(props) => (
+                  footerComponent={memo((props) => (
                     <BottomSheetFooter {...props}>
                     <View style={{display:'flex',flexDirection:'row',padding:24,backgroundColor:Color.GrayBackground}}>
                       <ExpoImage source={{uri:`${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}`}} style={{width:60,height:45, borderRadius:50,backgroundColor:'transparent',objectFit:'fill'}} />
                       <View style={{flex:1,height:45,color:'white',backgroundColor:Color.GrayBackground,padding:8,borderRadius:8,borderColor:'white',borderWidth:1,borderRadius:24,marginLeft:12,display:'flex',flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
                           <BottomSheetTextInput
-                          keyboardType='email-address'
+                          keyboardType='default'
                           style={{fontWeight:'bold',flex:1,color:'white'}} keyboardAppearance='dark'  placeholderTextColor={'white'} 
                           placeholder={`Add a comment for ${post.username}...`}
                           ref={PostCommentInput}
@@ -736,7 +855,7 @@ const addNewComment = (commentPost) => {
                       </View>
                     </BottomSheetFooter>
                    
-                  )}
+                  ))}
                   keyboardBehavior='extend'
                   keyboardBlurBehavior='restore'
                   
@@ -744,7 +863,10 @@ const addNewComment = (commentPost) => {
                   <View>
                     <Text style={{fontWeight:'bold',fontSize:20,color:'white',textAlign:'center'}}>Comments</Text>
                   </View>
-                 <BottomSheetScrollView style={{marginBottom:100}}>
+                 <BottomSheetScrollView style={{marginBottom:100}}
+                     onScroll={handleScroll}
+                     scrollEventThrottle={16}
+                 >
                  <AllCommentsContainer ref={AllCommentsRef} $user={user}>
                     {commentHeaders.length === 0 ? (
                       <NoCommentsContainer>
@@ -757,8 +879,7 @@ const addNewComment = (commentPost) => {
                 
                  </BottomSheetScrollView>
            
-                </BottomSheetModal>
-
+          </BottomSheetModal>
             </View>
            
   )
@@ -767,19 +888,19 @@ const addNewComment = (commentPost) => {
 const styles = StyleSheet.create({
     image:{
         width: Dimensions.get('window').width, // Adjust width according to screen size
-        height:450,
+        height:510,
         borderRadius:8,
         objectFit:'fill',  
     },
     video: {
         width: Dimensions.get('window').width, // Adjust width according to screen size
-        height:450,
+        height:510,
         borderRadius:8,
         objectFit:'fill'
       }, 
       iconContainer:{
         width: Dimensions.get('window').width, // Adjust width according to screen size
-        height:450,
+        height:510,
         borderRadius:8,
         position:'relative'
       },
@@ -875,6 +996,18 @@ const styles = StyleSheet.create({
       fontWeight: '400',
       overflow: 'hidden',
       flex: 1, // Allow this view to take remaining space
+    },
+    overlay:{
+      backgroundColor: 'rgba(0, 0, 0, 0.1)', // Semi-transparent background
+      zIndex: 1000, // Ensure overlay is above other components
+      // Ensure the overlay is not scrollable
+     position:'absolute',
+     top:0,
+     left:0,
+     bottom:0,
+      height: Dimensions.get('window').height,
+      width: Dimensions.get('window').width
+
     },
 });
 export default PostComponents

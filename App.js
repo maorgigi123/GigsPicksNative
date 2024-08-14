@@ -13,14 +13,14 @@ import { UserProvider } from './store/userContext';
   // persistor.purge();
 
 const App = () => {
-  const [splahAniamtionFinish, setSplashAnimationFinish] = useState(false)
+  const [splahAniamtionFinish, setSplashAnimationFinish] = useState(Platform.OS === 'android' ? true : false)
   LogBox.ignoreLogs(['Warning: ...']); // Replace 'Warning: ...' with the actual warning text
   LogBox.ignoreAllLogs();
   if (Platform.OS === "ios")
     Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
     return (
       <>
-      {splahAniamtionFinish ? 
+      {splahAniamtionFinish? 
       <Animated.View entering={FadeIn} style={{flex:1}}>
             <Provider store={store}>
               <PersistGate loading={null} persistor={persistor}>

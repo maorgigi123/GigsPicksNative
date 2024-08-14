@@ -18,6 +18,7 @@ import { Video } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import {Image} from 'expo-image'
 import ExpoImage from 'expo-image/build/ExpoImage';
+import { formatTimestamp } from '../../utils/CalcData';
 const Container = styled.SafeAreaView`
   flex: 1;
   background-color:${Color.BLACK};
@@ -140,13 +141,61 @@ const MessageUser = () => {
   const [hasNextPage, setHasNextPage] = useState(true);
   const [page, setPage] = useState(1);
   const [sendMessage , setSendMessage] = useState(false)
-  const pageLimit = 20
+  // const iFollowHim = currentUser && currentUser.following.find(follow => follow.following?.username && follow.following.username === user.recipient.username)
+  // const heFollowME = currentUser && user.recipient.following.find(follow => follow.following?.username && follow.following.username === currentUser.username)
+  // console.log(user.recipient)
+  const [iFollowHim,setiFollowHim] = useState(false)
+  const [heFollowME,setheFollowME] = useState(false)
+  const [load,setLoad] = useState(false)
+
+  // currentUser.following.some(follow => console.log('you follow on : ',follow.following.username))
+
+  const [loadMoreMessages, setLoadMoreMessages] = useState(false)
+  const pageMessages = useRef(0)
+  const [LoadMessages, setLoadMessages] = useState(messages)
+  const ChatIdx = useRef(0)
   useEffect(() => {
+    setLoadMessages(messages)
     setTimeout(() => {
         scrollToBottom();
-    },100)
+    },50)
    
   }, [messages,(focusInput === true)]);
+
+  const handleFetch = async() =>{
+    if(load) return
+    setLoad(true)
+    try{
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/check-mutual-following`, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerAId: currentUser._id,
+          playerBId: user._id, // Assuming _user has an _id field
+        }),
+       });
+       const data = await response.json();
+
+       console.log(data)
+       if(data.error) return
+
+       setiFollowHim(data.playerA_follows_playerB)
+       setheFollowME(data.playerB_follows_playerA)
+    }
+    catch (e) {
+      console.log('was error in check-mutual-following ', e)
+    }
+    finally{
+      setLoad(false)
+    }
+  
+  }
+
+  useEffect(() => {
+    if(!load)
+      handleFetch()
+  },[])
+
     // Function to get MIME type based on file extension
 const getMimeType = (extension) => {
   const mimeTypes = {
@@ -316,21 +365,69 @@ const getMimeType = (extension) => {
       }
     });
   };
-  // const handleScrool =(event) => {
-  //   const { contentOffset } = event.nativeEvent;
-  //   // Define a small threshold to consider as "at the top"
-  //   const threshold = 50;
-  //   const isTop = contentOffset.y <= threshold;
-  //   if(isTop && !sendLoader){
-  //     setSendLoader(true)
-  //     const scrollPosition = contentOffset.y;
-  //     setPageMessages((prev) => ++prev)
-  //     setTimeout(() => {
-  //       scrollToBottomRef.current.scrollTo({ y: scrollPosition, animated: false });
-  //       setSendLoader(false)
-  //     }, 700)
-  //   }
-  // }
+
+  const handleAddMoreMessages = async() => {
+    if(loadMoreMessages) return
+    try{
+      const FetchData = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/getMoreMessages`,{
+        method:'post',
+        headers:{'Content-Type' :'application/json'},
+        body:JSON.stringify({
+          chatId : messages[ChatIdx.current].chatId,
+          messagesSkip : LoadMessages[ChatIdx.current].messages.length
+        })
+      })
+      const data = await FetchData.json();
+      if(data.error){
+        return
+      }
+      setLoadMessages((prev) => {
+        // Create a copy of the previous state
+        const updatedMessages = [...prev];
+  
+        // Update the first element's messages
+        if (Array.isArray(data.messages) && updatedMessages.length > 0) {
+            updatedMessages[ChatIdx.current].messages = [...data.messages.reverse(), ...updatedMessages[ChatIdx.current].messages];
+        }
+  
+        return updatedMessages;
+    });
+      // data.messages.map(message => {
+      //   dispatch(setAddMessage(message))
+      // })
+        console.log('load more: ',data.messages.length )
+        if(!Array.isArray(data.messages) || data.messages.length < 15){
+          return
+        }
+        setLoadMoreMessages(false)
+        pageMessages.current ++
+    }
+    catch(e) {
+      console.error(e)
+    }
+
+
+ 
+
+
+  }
+  const handleScrool =(event) => {
+    const { contentOffset } = event.nativeEvent;
+    // Define a small threshold to consider as "at the top"
+    const threshold = 300;
+    const isTop = contentOffset.y <= threshold;
+    if(isTop && !loadMoreMessages){
+      setTimeout(() => {
+        handleAddMoreMessages()
+        setLoadMoreMessages(true)
+      },500)
+      // const scrollPosition = contentOffset.y;
+      // setTimeout(() => {
+      //   scrollToBottomRef.current.scrollTo({ y: scrollPosition, animated: false });
+      //   setSendLoader(false)
+      // }, 700)
+    }
+  }
   const renderItem = ({ item, index }) => {
     const isSelected = selectedMulti.some(selected => selected.uri === item.uri);
     const itemPosition = selectedMulti.find(selected => selected.uri === item.uri)?.position;
@@ -400,7 +497,7 @@ const getMimeType = (extension) => {
     );
   };
   
-  if(!currentUser) return
+  if(!currentUser) return null
   return (
     <Container>
         <MessageUserContainer>
@@ -432,22 +529,23 @@ const getMimeType = (extension) => {
 
           <ScrollView
           style={{flex:1}}
-          // onScroll={handleScrool}
+          onScroll={handleScrool}
           scrollEventThrottle={400} // Throttle the scroll events for performance
            ref={scrollToBottomRef}>
-            {messages.length === 0 ? (
-              <View style={{width:'100%',height:300,display:'flex',alignItems:'center',marginTop:20}}>
+            <View style={{width:'100%',display:'flex',alignItems:'center',marginTop:20,marginBottom:40}}>
                 <ExpoImage source={{uri:`${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}`}} style={{width:100,height:100,borderRadius:50}}/>
-                <Text style={{color:Color.WHITE,fontSize:20,fontWeight:500}}>{user.username}</Text>
-              </View>
-            ) : (
-              messages.map((allMessages) => {
+                <Text style={{color:Color.WHITE,fontSize:20,fontWeight:500,marginTop:10}}>{user.username}</Text>
+                <Text style={{color:Color.WHITE,fontSize:12,fontWeight:500,marginTop:10}}>{iFollowHim && heFollowME ? 'You both Follow each other': iFollowHim ? 'You Follow This user' : heFollowME ? 'follow you'  : 'you both dont follow each others' }</Text>
+            </View>
+            {(
+              LoadMessages.map((allMessages,_idx) => {
                 if (
                   (allMessages.participants[0].username === user.username &&
                     allMessages.participants[1].username === currentUser.username) ||
                   (allMessages.participants[1].username === user.username &&
                     allMessages.participants[0].username === currentUser.username)
                 ) {
+                  ChatIdx.current = _idx;
                   // .slice(allMessages.messages.length > (pageLimit * pageMessages) ? allMessages.messages.length-(pageLimit * pageMessages) : 0,allMessages.messages.length)
                   return allMessages.messages.map((_message, _idx,allList) => (
                     <Message
@@ -471,9 +569,10 @@ const getMimeType = (extension) => {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 40}>
           <InputContainer>
             <SmileComments>
-              <ExpoImage style={{width:30,height:30,borderRadius:500}} source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}` }}/>
+              <ExpoImage style={{width:40,height:40,borderRadius:500}} source={{ uri: `${process.env.EXPO_PUBLIC_API_URL}/uploads/${user.profile_img}` }}/>
             </SmileComments>
             <Input
+              style={{marginLeft:10}}
               onPress={() => setfocusInput((prev) => !prev)}
               value={inputMessage}
               onChangeText={handleOnChangeInput}

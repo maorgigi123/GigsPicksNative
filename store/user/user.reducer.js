@@ -5,8 +5,8 @@ const INITIAL_STATE = {
     messages : [],
     current_location: null,
     players_locations: [],
-    LoadForPost: {cover:'',status:false}
-
+    LoadForPost: {cover:'',status:false},
+    currentRoute : 'home'
 }
 
 
@@ -14,12 +14,35 @@ export const userReducer = (state = INITIAL_STATE, action={}) => {
     const { type, payload } = action;
     switch(type)
     {
+        case USER_ACTION_TYPES.SET_ROUTE: 
+            return{
+                ...state,
+                currentRoute:payload
+            }
         case USER_ACTION_TYPES.SET_CURRENT_USER:
             return {
                 ...state,
                 currentUser:payload
             }
+        case USER_ACTION_TYPES.ADD_FOLLOW: // this user add follow to other user
+            return{
+                ...state,
+                currentUser:{
+                    ...state.currentUser,
+                    following_count : state.currentUser.following_count + 1
+                }
+            }
+        
+        case USER_ACTION_TYPES.REMOVE_FOLLOW: // this user add follow to other user
+            return{
+                ...state,
+                currentUser:{
+                    ...state.currentUser,
+                    following_count : state.currentUser.following_count - 1
+                }
+            }
         case USER_ACTION_TYPES.SET_CURRENT_PROFILE_IMG:
+            console.log('change profile image ', payload)
             return {
                 ...state,
                 currentUser: {
@@ -29,38 +52,36 @@ export const userReducer = (state = INITIAL_STATE, action={}) => {
              }
 
         case USER_ACTION_TYPES.SET_UPDTE_MESSAGE:
-            const temp = state.messages.findIndex(conversation =>
-                (conversation.participants[0].username === action.payload.sender.username && conversation.participants[1].username === action.payload.recipient.username) ||
-                (conversation.participants[1].username === action.payload.sender.username && conversation.participants[0].username === action.payload.recipient.username)
-            );
-            if(temp > -1){
-                return {
-                    ...state,
-                    messages: state.messages.map((conversation, index) => {
-                        if (index === conversationIndex) {
-                            // Update the `read` status of all messages in this conversation
-                            const updatedMessages = conversation.messages.map(message => ({
-                                ...message,
-                                read: true // Set the read status to true for all messages
-                            }));
-
-                            // Add the new message to the updated messages
+            const { _id } = action.payload;
+            return {
+                ...state,
+                messages: state.messages.map((conversation, index) => {
+                    const updatedMessages = conversation.messages.map(message => {
+                        if (message._id === _id) {
+                            console.log('update read')
                             return {
-                                ...conversation,
-                                messages: [...updatedMessages, action.payload] // Append the new message
+                                ...message,
+                                read: true // Set the read status to true for the specific message
                             };
                         }
-                        return conversation; // Keep other conversations unchanged
-                    })
-                }
-            }
+                        return message; // Keep other messages unchanged
+                    });
+
+                    return {
+                        ...conversation,
+                        messages: updatedMessages
+                    };
+                    
+                })
+            };
+            
         case USER_ACTION_TYPES.SET_CURRENT_MESSAGES:
             return {
             ...state,
             messages : payload.slice().sort((a, b) => {
                 return new Date(a.timestamp) - new Date(b.timestamp);
             })
-            }
+        }
 
         case USER_ACTION_TYPES.SET_ADD_MESSAGE:
             console.log(payload.sender.username)

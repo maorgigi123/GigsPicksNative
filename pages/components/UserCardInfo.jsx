@@ -15,8 +15,7 @@ const UserCardInfo = ({user,setActiveCard}) => {
     const navigation = useNavigation()
     
     const handleSAyHello = () => {
-        setPathUserMessage({ username: user.username });
-
+        setPathUserMessage({ username: user.username,profile_img:user.profile_img,_id:user._id, recipient: user });
         navigation.navigate('Messages');
     }
   return (
@@ -26,21 +25,12 @@ const UserCardInfo = ({user,setActiveCard}) => {
             
             <View style={styles.cardInfo}>
                 <Text style={styles.cardTitle}>{user.username}</Text>
-                <ScrollView>
                     <TouchableOpacity style={styles.cardButtom} onPress={handleSAyHello}>
                         <View style={{display:'flex',flexDirection:'row',gap:10,justifyContent:'center',alignItems:'center'}}>
                             <Text  style={styles.cardButtomText}>say Hello</Text>
                             <MaterialCommunityIcons name={"hand-wave-outline"} size={28} color={Color.WHITE}/>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.cardButtom} onPress={() => {}}>
-                        <View style={{display:'flex',flexDirection:'row',gap:10,justifyContent:'center',alignItems:'center'}}>
-                            <Text  style={styles.cardButtomText}>show Profile</Text>
-                            <MaterialCommunityIcons name={"hand-wave-outline"} size={28} color={Color.WHITE}/>
-                        </View>
-                    </TouchableOpacity>
-                </ScrollView>
-
             </View>
             <TouchableOpacity onPress={() => setActiveCard(null)} activeOpacity={.6} style={{position:'absolute',top:-10,right:-10,padding:5,backgroundColor:Color.PRIMARY_BUTTON_HOVER,borderRadius:50,opacity:.9}}>
                 <AntDesign name={'close'} size={28} color={Color.WHITE} />
@@ -81,7 +71,7 @@ const styles = StyleSheet.create({
         padding:10,
         backgroundColor:Color.PRIMARY_BUTTON_HOVER,
         borderRadius:8,
-        paddingVertical: 20,
+        paddingVertical: 26,
         marginBottom:10
     },
     cardButtomText: {
